@@ -1,0 +1,14 @@
+{
+	"AWS":{
+		"APIVersion":"2006-03-01",
+		"BucketName":"fund-test-bucket-excel",
+		"BucketRegion":"ap-southeast-2",
+		"Backup":{
+			"Enabled":true,
+			"BucketName":"fund-test-backupbucket-excel"
+		}
+	},
+	"WatchDirectory":"files",
+	"SaveBackups":true,
+	"FileTypes":["excel","word","powerpoint"]
+}

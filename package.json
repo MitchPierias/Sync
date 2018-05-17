@@ -1,0 +1,17 @@
+{
+  "name": "Sync",
+  "version": "0.0.1",
+  "description": "Directory Auto S3 Uploader",
+  "main": "index.js",
+  "scripts": {
+    "start": "node run.js"
+  },
+  "author": "Mitch Pierias",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.241.1",
+    "chokidar": "^2.0.3",
+    "colors": "^1.2.5",
+    "walk": "^2.3.13"
+  }
+}
