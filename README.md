@@ -5,7 +5,9 @@ Automatically observe and syncronise a local directory with an Amazon AWS S3 Buc
 #### Problems
 - [ ] Buckets currently have no security, public read&write access.
 - [ ] Uploader saves into seperate buckets for temporary backups and finals.
-- [ ] No monitoring of file changes, then comparison and update.
+- [ ] Regular Expressions need expanding to ignore system files and support ALL document types.
+- [ ] Needs configuring settings for document types.
+- [ ] No monitoring of file changes. Should compare and update.
 - [ ] No deleting or flagging of deleted files between stores.
 
 ### Dependencies
