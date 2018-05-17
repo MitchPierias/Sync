@@ -31,12 +31,70 @@ const KEY_AWS_S3_OBJECT_RESPONSE_CONTENTS_TAG = 'ETag';
  */
 let directoryInitialized = false;
 let log = console.log.bind(console);
+let localFiles = [];
 
 /*
  * AWS Configuration
  */
 AWS.config.update({region: bucketRegion});
 const s3 = new AWS.S3({apiVersion:APIVersion,params:{Bucket:albumBucketName}});
+
+/**
+ * Syncronise Stores
+ * @note Compares and uploads new local files to the cloud
+ */
+function syncroniseDataStores(bucketList, localList) {
+	// Iterate and compare
+	localList.forEach(function(filename) {
+		// Escape if file already stored
+		if (bucketList.indexOf(filename) >= 0 || /\~\$/gi.test(filename)) return;
+		console.log(colors.yellow("Found '"+filename+"', syncronising..."));
+		// Read data and upload to AWS S3
+		fs.readFile(watchDirectory+'/'+filename, function(err, data) {
+			// Log errors and escape
+			if (err) return log(err);
+			// Upload the data buffer
+			uploadFile(filename, data, false);
+		});
+	});
+
+	console.log(colors.green("Cloud syncronised"));
+}
+
+////////////////////
+// Walker Events //
+////////////////////
+
+/**
+ * Walk File
+ * @note Fired for each file walked
+ */
+walker.on('file', function(root, stat, next) {
+	localFiles.push(stat.name);
+	next();
+});
+
+/**
+ * End Walk
+ * @note Fired when directory walk complete
+ */
+walker.on('end', function() {
+	console.log(colors.grey("Mapping local '"+watchDirectory+"' directory"));
+	// Fetch cloud storage list and syncronise
+	listFiles(function(err, bucketFileList) {
+		if (err) {
+			console.log(colors.red(err));
+		} else {
+			console.log(colors.white(bucketFileList.length+" files on the cloud"));
+			console.log(colors.grey("Scanning directory for unsyncronised files"));
+			syncroniseDataStores(bucketFileList, localFiles);
+		}
+	});
+});
+
+////////////////////
+// Watcher Events //
+////////////////////
 
 /*
  * Watcher Configuration
@@ -46,55 +104,12 @@ var watcher = chokidar.watch(watchDirectory, {
 	persistent:true
 });
 
-let localFiles = [];
-
-listFiles(function(err, bucketFileList) {
-	if (err) {
-		console.log(colors.red(err));
-	} else {
-		console.log(colors.grey(bucketFileList.length+" files on the cloud"));
-		console.log(colors.white("Scanning directory for unsyncronised files"));
-		syncroniseDataStores(bucketFileList, localFiles);
-	}
-});
-
-walker.on('file', function(root, stat, next) {
-	localFiles.push(stat.name);
-	next();
-});
-
-walker.on('end', function() {
-	console.log(colors.grey("Finished walking current directory"));
-})
-
-function syncroniseDataStores(bucketList, localList) {
-	// Iterate and compare
-	localList.forEach(function(filename) {
-		// Escape if file already stored
-		if (bucketList.indexOf(filename) >= 0 || /\~\$/gi.test(filename)) return;
-		// Read data and upload to AWS S3
-		fs.readFile(watchDirectory+'/'+filename, function(err, data) {
-			// Log errors and escape
-			if (err) return log(err);
-			console.log(colors.yellow("Syncronising '"+filename+"'"));
-			// Upload the data buffer
-			uploadFile(filename, data, false);
-		});
-	});
-
-	console.log(colors.grey("Syncronise complete"));
-}
-
-/**
- * Watcher Events
- */
-
 /**
  * Ready
  * @note Fired after the initial directory scan
  */
 watcher.on("ready", function() {
-	log(colors.grey("Observing directory '"+watchDirectory+"'"));
+	log(colors.grey("Observing '"+watchDirectory+"' directory"));
 	directoryInitialized = true;
 })
 
@@ -105,7 +120,7 @@ watcher.on("ready", function() {
 watcher.on('add', function(path) {
 	// Skip if directory is initializing
 	if (!directoryInitialized) return;
-	if (false === /\.(xlsx|xlm)/gi.test(path)) return;
+	if (false === /\.(xlsx|xlsm|xls|xlt|xlm|docx|docm|docb|doc|dotx|dotm|dot|wbk|txt)/gi.test(path)) return;
 	// Read data and upload to AWS S3
 	fs.readFile(path, function(err, data) {
 		// Log errors and escape
@@ -115,14 +130,22 @@ watcher.on('add', function(path) {
 	});
 });
 
+//////////////////////
+// Helper Functions //
+//////////////////////
+
 /**
  * Filename from full path
  * @note Trims the path from the filename
  */
 function filenameFromPath(path) {
 	// This should the filename and extension not fullpath minus watch directory
-	return path.match(/[\~\$\-\_\w\d]*\.xlsx|xlsm|xls|xlt|xlm|doc|docx|docm|docb|dot|dotx|dotm|wbk|txt/gi)[0];
+	return path.match(/[\~\$\-\_\w\d]*\.(xlsx|xlsm|xls|xlt|xlm|docx|docm|docb|doc|dotx|dotm|dot|wbk|txt)/gi)[0];
 }
+
+//////////////////////
+// AWS S3 Functions //
+//////////////////////
 
 /**
  * List Files
