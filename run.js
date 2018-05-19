@@ -111,7 +111,7 @@ var watcher = chokidar.watch(watchDirectory, {
 watcher.on("ready", function() {
 	log(colors.grey("Observing '"+watchDirectory+"' directory"));
 	directoryInitialized = true;
-})
+});
 
 /**
  * Add
@@ -127,6 +127,17 @@ watcher.on('add', function(path) {
 		if (err) return log(err);
 		// Upload the data buffer
 		uploadFile(filenameFromPath(path), data, /\~\$/gi.test(path));
+	});
+});
+
+watcher.on("change", function(path) {
+	if (false === /\.(xlsx|xlsm|xls|xlt|xlm|docx|docm|docb|doc|dotx|dotm|dot|wbk|txt)/gi.test(path)) return;
+	// Read data and upload to AWS S3
+	fs.readFile(path, function(err, data) {
+		// Log errors and escape
+		if (err) return log(err);
+		// Upload the data buffer
+		updateFile(filenameFromPath(path), data);
 	});
 });
 
@@ -198,4 +209,8 @@ function uploadFile(fileName, fileData=Buffer, isBackup=false) {
 			log(colors[logColor](logTag+" '"+fileName+"' with tag '"+data.ETag.replace(/\"/gi,'')+"'."));
 		}
 	});
+}
+
+function updateFile(fileName, fileData=Buffer) {
+	console.log(colors.yellow("Should update file '"+fileName+"'"));
 }
